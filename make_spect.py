@@ -50,7 +50,7 @@ for subdir in sorted(subdirList):
     if not os.path.exists(os.path.join(targetDir, subdir)):
         os.makedirs(os.path.join(targetDir, subdir))
     _,_, fileList = next(os.walk(os.path.join(dirName,subdir)))
-    prng = RandomState(int(subdir[1:])) 
+    prng = RandomState(int(subdir[-2:])) 
     for fileName in sorted(fileList):
         # Read audio file
         x, fs = sf.read(os.path.join(dirName,subdir,fileName))
