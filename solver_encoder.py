@@ -19,6 +19,7 @@ class Solver(object):
         self.dim_emb = config.dim_emb
         self.dim_pre = config.dim_pre
         self.freq = config.freq
+        self.checkpoint_iters = config.checkpoint_iters
 
         # Training configurations.
         self.batch_size = config.batch_size
@@ -119,6 +120,10 @@ class Solver(object):
                 for tag in keys:
                     log += ", {}: {:.4f}".format(tag, loss[tag])
                 print(log)
+
+            # Save checkpoint
+            if (i+1) % self.checkpoint_iters == 0:
+                torch.save(self.G, "checkpoints/checkpoint_{}.pt".format(i+1))
                 
 
     

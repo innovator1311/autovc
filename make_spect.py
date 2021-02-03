@@ -37,7 +37,7 @@ b, a = butter_highpass(30, 16000, order=5)
 
 
 # audio file directory
-rootDir = './wavs'
+rootDir = './vivos_only_wavs'
 # spectrogram directory
 targetDir = './spmel'
 
