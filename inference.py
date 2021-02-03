@@ -7,6 +7,8 @@ from model_vc import Generator
 
 import soundfile as sf
 
+
+
 def pad_seq(x, base=32):
     len_out = int(base * ceil(float(x.shape[0])/base))
     len_pad = len_out - x.shape[0]
@@ -16,8 +18,7 @@ def pad_seq(x, base=32):
 device = 'cuda:0'
 G = Generator(32,256,512,32).eval().to(device)
 
-g_checkpoint = torch.load('../drive/MyDrive/MultiSpeaker_Tacotron2/autovc.ckpt',map_location=torch.device('cuda'))
-G.load_state_dict(g_checkpoint['model'])
+G = torch.load('checkpoints/checkpoint_1000.pt',map_location=torch.device('cuda'))
 
 metadata = pickle.load(open('metadata.pkl', "rb"))
 

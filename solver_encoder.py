@@ -123,7 +123,7 @@ class Solver(object):
 
             # Save checkpoint
             if (i+1) % self.checkpoint_iters == 0:
-                torch.save(self.G, "checkpoints/checkpoint_{}.pt".format(i+1))
+                torch.save(self.G, "checkpoints/autovc_{}.pt".format(i+1))
                 
 
     
