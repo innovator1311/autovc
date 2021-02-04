@@ -29,42 +29,51 @@ def pySTFT(x, fft_length=1024, hop_length=256):
     result = np.fft.rfft(fft_window * result, n=fft_length).T
     
     return np.abs(result)    
-    
-    
+
+def makeSpect(full_path):
+
+    # Read audio file
+    x, fs = sf.read(full_path)
+    # Remove drifting noise
+    y = signal.filtfilt(b, a, x)
+    # Ddd a little random noise for model roubstness
+    #wav = y * 0.96 + (prng.rand(y.shape[0])-0.5)*1e-06
+    wav = y
+    # Compute spect
+    D = pySTFT(wav).T
+    # Convert to mel and normalize
+    D_mel = np.dot(D, mel_basis)
+    D_db = 20 * np.log10(np.maximum(min_level, D_mel)) - 16
+    S = np.clip((D_db + 100) / 100, 0, 1)    
+    # save spect    
+
+    return S
+
 mel_basis = mel(16000, 1024, fmin=90, fmax=7600, n_mels=80).T
 min_level = np.exp(-100 / 20 * np.log(10))
 b, a = butter_highpass(30, 16000, order=5)
 
+if __name__ == "__main__":
 
-# audio file directory
-rootDir = './vivos_only_wavs'
-# spectrogram directory
-targetDir = './spmel'
+    # audio file directory
+    rootDir = './vivos_only_wavs'
+    # spectrogram directory
+    targetDir = './spmel'
 
 
-dirName, subdirList, _ = next(os.walk(rootDir))
-print('Found directory: %s' % dirName)
+    dirName, subdirList, _ = next(os.walk(rootDir))
+    print('Found directory: %s' % dirName)
 
-for subdir in sorted(subdirList):
-    print(subdir)
-    if not os.path.exists(os.path.join(targetDir, subdir)):
-        os.makedirs(os.path.join(targetDir, subdir))
-    _,_, fileList = next(os.walk(os.path.join(dirName,subdir)))
-    prng = RandomState(int(subdir[-2:])) 
-    for fileName in sorted(fileList):
-        # Read audio file
-        x, fs = sf.read(os.path.join(dirName,subdir,fileName))
-        # Remove drifting noise
-        y = signal.filtfilt(b, a, x)
-        # Ddd a little random noise for model roubstness
-        wav = y * 0.96 + (prng.rand(y.shape[0])-0.5)*1e-06
-        # Compute spect
-        D = pySTFT(wav).T
-        # Convert to mel and normalize
-        D_mel = np.dot(D, mel_basis)
-        D_db = 20 * np.log10(np.maximum(min_level, D_mel)) - 16
-        S = np.clip((D_db + 100) / 100, 0, 1)    
-        # save spect    
-        np.save(os.path.join(targetDir, subdir, fileName[:-4]),
-                S.astype(np.float32), allow_pickle=False)    
+    for subdir in sorted(subdirList):
+        print(subdir)
+        if not os.path.exists(os.path.join(targetDir, subdir)):
+            os.makedirs(os.path.join(targetDir, subdir))
+        _,_, fileList = next(os.walk(os.path.join(dirName,subdir)))
+        prng = RandomState(int(subdir[-2:])) 
+        for fileName in sorted(fileList):
+
+            full_path = os.path.join(dirName,subdir,fileName)
+            S = makeSpect(full_path)
+            np.save(os.path.join(targetDir, subdir, fileName[:-4]),
+                    S.astype(np.float32), allow_pickle=False)    
         
