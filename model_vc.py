@@ -176,6 +176,7 @@ class Generator(nn.Module):
         
         self.encoder = Encoder(dim_neck, dim_emb, freq)
         self.decoder = Decoder(dim_neck, dim_emb, dim_pre)
+        self.embed_linear = nn.Linear(400, 256)
         self.postnet = Postnet()
 
     def forward(self, x, c_org, c_trg):
@@ -189,6 +190,11 @@ class Generator(nn.Module):
             tmp.append(code.unsqueeze(1).expand(-1,int(x.size(1)/len(codes)),-1))
         code_exp = torch.cat(tmp, dim=1)
         
+        ### change dim from 400 -> 256
+        c_trg = self.embed_linear(c_trg)
+        c_org = self.embed_linear(c_org)
+        ###
+
         encoder_outputs = torch.cat((code_exp, c_trg.unsqueeze(1).expand(-1,x.size(1),-1)), dim=-1)
         
         mel_outputs = self.decoder(encoder_outputs)
