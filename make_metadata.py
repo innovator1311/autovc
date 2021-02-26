@@ -7,6 +7,7 @@ from model_bl import D_VECTOR
 from collections import OrderedDict
 import numpy as np
 import torch
+import speaker_dct from speaker_dct
 
 C = D_VECTOR(dim_input=80, dim_cell=768, dim_emb=256).eval().cuda()
 c_checkpoint = torch.load('../drive/MyDrive/MultiSpeaker_Tacotron2/3000000-BL.ckpt')
@@ -32,6 +33,8 @@ for speaker in sorted(subdirList):
     _, _, fileList = next(os.walk(os.path.join(dirName,speaker)))
     
     # make speaker embedding
+
+    '''
     assert len(fileList) >= num_uttrs
     idx_uttrs = np.random.choice(len(fileList), size=num_uttrs, replace=False)
     embs = []
@@ -47,7 +50,15 @@ for speaker in sorted(subdirList):
         melsp = torch.from_numpy(tmp[np.newaxis, left:left+len_crop, :]).cuda()
         emb = C(melsp)
         embs.append(emb.detach().squeeze().cpu().numpy())     
-    utterances.append(np.mean(embs, axis=0))
+    '''
+
+    #utterances.append(np.mean(embs, axis=0))
+    idx = speaker_dct[speaker]
+    num = np.array([0] * len(subdirList))
+    num[idx] = 1
+
+    embed = torch.HalfTensor(num)
+    utterances.append(embed)
     
     # create file list
     for fileName in sorted(fileList):

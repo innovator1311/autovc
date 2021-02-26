@@ -6,7 +6,7 @@ from scipy import signal
 from scipy.signal import get_window
 from librosa.filters import mel
 from numpy.random import RandomState
-
+from speaker_dct import speaker_dct
 
 def butter_highpass(cutoff, fs, order=5):
     nyq = 0.5 * fs
@@ -56,7 +56,7 @@ b, a = butter_highpass(30, 16000, order=5)
 if __name__ == "__main__":
 
     # audio file directory
-    rootDir = './vivos_only_wavs'
+    rootDir = './dataset'
     # spectrogram directory
     targetDir = './spmel'
 
@@ -65,11 +65,14 @@ if __name__ == "__main__":
     print('Found directory: %s' % dirName)
 
     for subdir in sorted(subdirList):
-        print(subdir)
+        
         if not os.path.exists(os.path.join(targetDir, subdir)):
             os.makedirs(os.path.join(targetDir, subdir))
         _,_, fileList = next(os.walk(os.path.join(dirName,subdir)))
-        prng = RandomState(int(subdir[-2:])) 
+
+        num = speaker_dct[subdir]
+        prng = RandomState(num)
+
         for fileName in sorted(fileList):
 
             full_path = os.path.join(dirName,subdir,fileName)
