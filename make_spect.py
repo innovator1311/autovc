@@ -56,7 +56,7 @@ b, a = butter_highpass(30, 16000, order=5)
 if __name__ == "__main__":
 
     # audio file directory
-    rootDir = './dataset'
+    rootDir = '../dataset'
     # spectrogram directory
     targetDir = './spmel'
 
