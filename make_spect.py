@@ -30,15 +30,19 @@ def pySTFT(x, fft_length=1024, hop_length=256):
     
     return np.abs(result)    
 
-def makeSpect(full_path):
+def makeSpect(full_path, prng):
 
     # Read audio file
     x, fs = sf.read(full_path)
     # Remove drifting noise
     y = signal.filtfilt(b, a, x)
     # Ddd a little random noise for model roubstness
-    #wav = y * 0.96 + (prng.rand(y.shape[0])-0.5)*1e-06
-    wav = y
+    
+    if prng is not None:
+        wav = y * 0.96 + (prng.rand(y.shape[0])-0.5)*1e-06
+    else:
+        wav = y
+
     # Compute spect
     D = pySTFT(wav).T
     # Convert to mel and normalize
@@ -56,7 +60,7 @@ b, a = butter_highpass(30, 22050, order=5)
 if __name__ == "__main__":
 
     # audio file directory
-    rootDir = './wavs_22'
+    rootDir = './wavs'
     # spectrogram directory
     targetDir = './spmel'
 
@@ -64,19 +68,19 @@ if __name__ == "__main__":
     dirName, subdirList, _ = next(os.walk(rootDir))
     print('Found directory: %s' % dirName)
 
-    for subdir in sorted(subdirList):
+    for num, subdir in enumerate(sorted(subdirList)):
         
         if not os.path.exists(os.path.join(targetDir, subdir)):
             os.makedirs(os.path.join(targetDir, subdir))
         _,_, fileList = next(os.walk(os.path.join(dirName,subdir)))
 
         #num = speaker_dct[subdir]
-        #prng = RandomState(num)
+        prng = RandomState(num)
 
         for fileName in sorted(fileList):
 
             full_path = os.path.join(dirName,subdir,fileName)
-            S = makeSpect(full_path)
+            S = makeSpect(full_path, prng)
             np.save(os.path.join(targetDir, subdir, fileName[:-4]),
                     S.astype(np.float32), allow_pickle=False)    
         
