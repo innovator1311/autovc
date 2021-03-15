@@ -84,7 +84,7 @@ class Encoder_RemoveSpeaker(nn.Module):
     """Encoder module:
     """
     def __init__(self, dim_neck, dim_emb, freq):
-        super(Encoder, self).__init__()
+        super(Encoder_RemoveSpeaker, self).__init__()
         self.dim_neck = dim_neck
         self.freq = freq
         
@@ -246,7 +246,7 @@ class Generator(nn.Module):
 class Generator_RemoveSpeaker(nn.Module):
     """Generator network."""
     def __init__(self, dim_neck, dim_emb, dim_pre, freq):
-        super(Generator, self).__init__()
+        super(Generator_RemoveSpeaker, self).__init__()
         
         self.encoder = Encoder_RemoveSpeaker(dim_neck, dim_emb, freq)
         self.decoder = Decoder(dim_neck, dim_emb, dim_pre)
@@ -259,7 +259,7 @@ class Generator_RemoveSpeaker(nn.Module):
     def forward(self, x, c_org, c_trg):
                 
         codes = self.encoder(x, c_org)
-        code = codes * self.embed_linear(c_org)
+        code = codes * self.embed_linear(c_org).unsqueeze(1).expand((codes.size(0), codes.size(1), -1))
 
         if c_trg is None:
             return torch.mean(codes, dim=1)
