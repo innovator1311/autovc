@@ -259,7 +259,7 @@ class Generator_RemoveSpeaker(nn.Module):
     def forward(self, x, c_org, c_trg):
                 
         codes = self.encoder(x, c_org)
-        code = codes * self.embed_linear(c_org).unsqueeze(1).expand((codes.size(0), codes.size(1), -1))
+        code = codes * ( 1 - self.embed_linear(c_org).unsqueeze(1).expand((codes.size(0), codes.size(1), -1)))
 
         if c_trg is None:
             return torch.mean(codes, dim=1)
