@@ -36,7 +36,7 @@ class Solver(object):
             
     def build_model(self):
         
-        self.G = Generator(self.dim_neck, self.dim_emb, self.dim_pre, self.freq)        
+        self.G = Generator_RemoveSpeaker(self.dim_neck, self.dim_emb, self.dim_pre, self.freq)        
         
         self.g_optimizer = torch.optim.Adam(self.G.parameters(), 0.0001)
         

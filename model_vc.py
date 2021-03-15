@@ -79,8 +79,43 @@ class Encoder(nn.Module):
             codes.append(torch.cat((out_forward[:,i+self.freq-1,:],out_backward[:,i,:]), dim=-1))
 
         return codes
-      
+
+class Encoder_RemoveSpeaker(nn.Module):
+    """Encoder module:
+    """
+    def __init__(self, dim_neck, dim_emb, freq):
+        super(Encoder, self).__init__()
+        self.dim_neck = dim_neck
+        self.freq = freq
         
+        convolutions = []
+        for i in range(3):
+            conv_layer = nn.Sequential(
+                ConvNorm(80+dim_emb if i==0 else 512,
+                         512,
+                         kernel_size=5, stride=1,
+                         padding=2,
+                         dilation=1, w_init_gain='relu'),
+                nn.BatchNorm1d(512))
+            convolutions.append(conv_layer)
+        self.convolutions = nn.ModuleList(convolutions)
+        
+        self.lstm = nn.LSTM(512, dim_neck, 2, batch_first=True, bidirectional=True)
+
+    def forward(self, x, c_org):
+        x = x.squeeze(1).transpose(2,1)
+        c_org = c_org.unsqueeze(-1).expand(-1, -1, x.size(-1))
+        x = torch.cat((x, c_org), dim=1)
+        
+        for conv in self.convolutions:
+            x = F.relu(conv(x))
+        x = x.transpose(1, 2)
+        
+        self.lstm.flatten_parameters()
+        outputs, _ = self.lstm(x)
+        
+        return outputs
+
 class Decoder(nn.Module):
     """Decoder module:
     """
@@ -176,7 +211,7 @@ class Generator(nn.Module):
         
         self.encoder = Encoder(dim_neck, dim_emb, freq)
         self.decoder = Decoder(dim_neck, dim_emb, dim_pre)
-        self.embed_linear = nn.Linear(400, 256)
+        #self.embed_linear = nn.Linear(400, 256)
         self.postnet = Postnet()
 
     def forward(self, x, c_org, c_trg):
@@ -191,8 +226,8 @@ class Generator(nn.Module):
         code_exp = torch.cat(tmp, dim=1)
         
         ### change dim from 400 -> 256
-        c_trg = self.embed_linear(c_trg)
-        c_org = self.embed_linear(c_org)
+        #c_trg = self.embed_linear(c_trg)
+        #c_org = self.embed_linear(c_org)
         ###
 
         encoder_outputs = torch.cat((code_exp, c_trg.unsqueeze(1).expand(-1,x.size(1),-1)), dim=-1)
@@ -208,3 +243,35 @@ class Generator(nn.Module):
         return mel_outputs, mel_outputs_postnet, torch.cat(codes, dim=-1)
 
     
+class Generator_RemoveSpeaker(nn.Module):
+    """Generator network."""
+    def __init__(self, dim_neck, dim_emb, dim_pre, freq):
+        super(Generator, self).__init__()
+        
+        self.encoder = Encoder_RemoveSpeaker(dim_neck, dim_emb, freq)
+        self.decoder = Decoder(dim_neck, dim_emb, dim_pre)
+        self.embed_linear = nn.Sequential(
+                nn.Linear(256, 2*dim_neck),
+                nn.Sigmoid()
+        )
+        self.postnet = Postnet()
+
+    def forward(self, x, c_org, c_trg):
+                
+        codes = self.encoder(x, c_org)
+        code = codes * self.embed_linear(c_org)
+
+        if c_trg is None:
+            return torch.mean(codes, dim=1)
+        
+        encoder_outputs = torch.cat((codes, c_trg.unsqueeze(1).expand(codes.size(0),codes.size(1),-1)), dim=-1)
+        
+        mel_outputs = self.decoder(encoder_outputs)
+                
+        mel_outputs_postnet = self.postnet(mel_outputs.transpose(2,1))
+        mel_outputs_postnet = mel_outputs + mel_outputs_postnet.transpose(2,1)
+        
+        mel_outputs = mel_outputs.unsqueeze(1)
+        mel_outputs_postnet = mel_outputs_postnet.unsqueeze(1)
+        
+        return mel_outputs, mel_outputs_postnet, torch.mean(codes, dim=1)
