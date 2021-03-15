@@ -77,7 +77,7 @@ class Solver(object):
             
             
             x_real = x_real.to(self.device) 
-            emb_org = emb_org.to(self.device) 
+            emb_org = emb_org.type(torch.FloatTensor).to(self.device) 
                         
        
             # =================================================================================== #
