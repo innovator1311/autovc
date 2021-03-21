@@ -113,8 +113,15 @@ class Encoder_RemoveSpeaker(nn.Module):
         
         self.lstm.flatten_parameters()
         outputs, _ = self.lstm(x)
+
+        out_forward = outputs[:, :, :self.dim_neck]
+        out_backward = outputs[:, :, self.dim_neck:]
         
-        return outputs
+        codes = []
+        for i in range(0, outputs.size(1), self.freq):
+            codes.append(torch.cat((out_forward[:,i+self.freq-1,:],out_backward[:,i,:]), dim=-1))
+
+        return codes
 
 class Decoder(nn.Module):
     """Decoder module:
@@ -250,21 +257,36 @@ class Generator_RemoveSpeaker(nn.Module):
         
         self.encoder = Encoder_RemoveSpeaker(dim_neck, dim_emb, freq)
         self.decoder = Decoder(dim_neck, dim_emb, dim_pre)
-        self.embed_linear = nn.Sequential(
-                nn.Linear(256, 2*dim_neck),
-                nn.Sigmoid()
-        )
+        #self.embed_linear = nn.Sequential(
+                #nn.Linear(2*dim_neck, 256),
+                #nn.Sigmoid()
+        #)
+        self.speaker_gate = torch.ones([2 * dim_neck], dtype=torch.float32)
+        self.speaker_embed = nn.Linear(2*dim_neck, dim_emb)
+
+        self.sigmoid = nn.Sigmoid()
         self.postnet = Postnet()
 
     def forward(self, x, c_org, c_trg):
                 
         codes = self.encoder(x, c_org)
-        code = codes * ( 1 - self.embed_linear(c_org).unsqueeze(1).expand((codes.size(0), codes.size(1), -1)))
+        
 
         if c_trg is None:
             return torch.mean(codes, dim=1)
-        
-        encoder_outputs = torch.cat((codes, c_trg.unsqueeze(1).expand(codes.size(0),codes.size(1),-1)), dim=-1)
+
+        tmp = []
+        for code in codes:
+            tmp.append(code.unsqueeze(1).expand(-1,int(x.size(1)/len(codes)),-1))
+        code_exp = torch.cat(tmp, dim=1)
+
+        ### print code_exp shape to test
+        speaker_embed = torch.mean(code_exp, dim=1) * self.sigmoid(self.speaker_gate)
+        speaker_embed = self.speaker_embed(speaker_embed)
+        ###
+
+        code_exp = code_exp * (1 - self.sigmoid(self.speaker_gate))
+        encoder_outputs = torch.cat((code_exp, c_trg.unsqueeze(1).expand(codes.size(0),codes.size(1),-1)), dim=-1)
         
         mel_outputs = self.decoder(encoder_outputs)
                 
@@ -273,5 +295,7 @@ class Generator_RemoveSpeaker(nn.Module):
         
         mel_outputs = mel_outputs.unsqueeze(1)
         mel_outputs_postnet = mel_outputs_postnet.unsqueeze(1)
+
+        print(self.speaker_gate)
         
-        return mel_outputs, mel_outputs_postnet, torch.mean(codes, dim=1)
+        return mel_outputs, mel_outputs_postnet, torch.mean(codes, dim=1), speaker_embed
