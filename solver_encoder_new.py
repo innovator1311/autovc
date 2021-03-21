@@ -38,6 +38,8 @@ class Solver(object):
         
         self.G = Generator_RemoveSpeaker(self.dim_neck, self.dim_emb, self.dim_pre, self.freq)        
         
+        #print(list(self.G.parameters()))
+
         self.g_optimizer = torch.optim.Adam(self.G.parameters(), 0.0001)
         
         self.G.to(self.device)
@@ -57,7 +59,7 @@ class Solver(object):
         data_loader = self.vcc_loader
         
         # Print logs in specified order
-        keys = ['G/loss_id','G/loss_id_psnt','G/loss_cd']
+        keys = ['G/loss_id','G/loss_id_psnt','G/loss_cd', 'G/loss_speaker']
             
         # Start training.
         print('Start training...')
@@ -99,7 +101,7 @@ class Solver(object):
             g_loss_cd = F.l1_loss(code_real, code_reconst)
 
             # speaker loss
-            speaker_loss = F.mse_loss(emb_org, speaker_embed)
+            speaker_loss = F.l1_loss(emb_org, speaker_embed)
 
 
 

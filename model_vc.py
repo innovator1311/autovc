@@ -255,13 +255,15 @@ class Generator_RemoveSpeaker(nn.Module):
     def __init__(self, dim_neck, dim_emb, dim_pre, freq):
         super(Generator_RemoveSpeaker, self).__init__()
         
+
         self.encoder = Encoder_RemoveSpeaker(dim_neck, dim_emb, freq)
         self.decoder = Decoder(dim_neck, dim_emb, dim_pre)
         #self.embed_linear = nn.Sequential(
                 #nn.Linear(2*dim_neck, 256),
                 #nn.Sigmoid()
         #)
-        self.speaker_gate = torch.ones([2 * dim_neck], dtype=torch.float32)
+
+        self.speaker_gate = nn.Parameter(torch.ones([2 * dim_neck], dtype=torch.float32).to("cuda"), requires_grad=True)
         self.speaker_embed = nn.Linear(2*dim_neck, dim_emb)
 
         self.sigmoid = nn.Sigmoid()
@@ -273,7 +275,7 @@ class Generator_RemoveSpeaker(nn.Module):
         
 
         if c_trg is None:
-            return torch.mean(codes, dim=1)
+            return torch.cat(codes, dim=-1)
 
         tmp = []
         for code in codes:
@@ -286,7 +288,7 @@ class Generator_RemoveSpeaker(nn.Module):
         ###
 
         code_exp = code_exp * (1 - self.sigmoid(self.speaker_gate))
-        encoder_outputs = torch.cat((code_exp, c_trg.unsqueeze(1).expand(codes.size(0),codes.size(1),-1)), dim=-1)
+        encoder_outputs = torch.cat((code_exp, c_trg.unsqueeze(1).expand(-1,x.size(1),-1)), dim=-1)
         
         mel_outputs = self.decoder(encoder_outputs)
                 
@@ -296,6 +298,6 @@ class Generator_RemoveSpeaker(nn.Module):
         mel_outputs = mel_outputs.unsqueeze(1)
         mel_outputs_postnet = mel_outputs_postnet.unsqueeze(1)
 
-        print(self.speaker_gate)
+        #print(self.speaker_gate)
         
-        return mel_outputs, mel_outputs_postnet, torch.mean(codes, dim=1), speaker_embed
+        return mel_outputs, mel_outputs_postnet, torch.cat(codes, dim=-1), speaker_embed
