@@ -87,7 +87,7 @@ class Solver(object):
             self.G = self.G.train()
                         
             # Identity mapping loss
-            x_identic, x_identic_psnt, code_real = self.G(x_real, emb_org, emb_org)
+            x_identic, x_identic_psnt, code_real,speaker_embed = self.G(x_real, emb_org, emb_org)
             x_identic = x_identic.squeeze()
             x_identic_psnt = x_identic_psnt.squeeze()
             
@@ -98,9 +98,13 @@ class Solver(object):
             code_reconst = self.G(x_identic_psnt, emb_org, None)
             g_loss_cd = F.l1_loss(code_real, code_reconst)
 
+            # speaker loss
+            speaker_loss = F.mse_loss(emb_org, speaker_embed)
+
+
 
             # Backward and optimize.
-            g_loss = g_loss_id + g_loss_id_psnt + self.lambda_cd * g_loss_cd
+            g_loss = g_loss_id + g_loss_id_psnt + self.lambda_cd * g_loss_cd + speaker_loss
             self.reset_grad()
             g_loss.backward()
             self.g_optimizer.step()
@@ -110,6 +114,7 @@ class Solver(object):
             loss['G/loss_id'] = g_loss_id.item()
             loss['G/loss_id_psnt'] = g_loss_id_psnt.item()
             loss['G/loss_cd'] = g_loss_cd.item()
+            loss['G/loss_speaker'] = speaker_loss.item()
 
             # =================================================================================== #
             #                                 4. Miscellaneous                                    #
