@@ -109,25 +109,28 @@ def get_verification_pytorch(audio_path):
 
 
 # Directory containing mel-spectrograms
-rootDir = '../vlsp2020_train_set_02'
+rootDir = '../vlsp2020_train_set_02/'
 dirName, subdirList, _ = next(os.walk(rootDir))
 print('Found directory: %s' % dirName)
 
 
 speakers = []
-for speaker in sorted(subdirList):
+for speaker in os.listdir(rootDir):
     
     print('Processing speaker: %s' % speaker)
         
     try:
-        audio_path = "../vlsp2020_train_set_02/{}.wav".format(speaker)
+        if ".txt" in speaker: continue
+        if os.path.exists("../drive/MyDrive/TMP/VinBigMel/{}.npy".format(speaker[:-4])): continue
+
+        audio_path = "../vlsp2020_train_set_02/{}".format(speaker)
         emb = get_verification_pytorch(audio_path)
 
         if np.isnan(np.sum(emb)): 
             print("Have nan")
             continue
         
-        np.save("../vinbigdata_embed/{}".format(), emb)
+        np.save("../drive/MyDrive/TMP/VinBigMel/{}.npy".format(speaker[:-4]), emb)
         print("Did save")
 
     except:
