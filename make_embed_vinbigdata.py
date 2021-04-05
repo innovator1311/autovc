@@ -123,7 +123,7 @@ for speaker in os.listdir(rootDir):
         if ".txt" in speaker: continue
         if os.path.exists("../drive/MyDrive/TMP/VinBigMelReduceNoise/{}.npy".format(speaker[:-4])): continue
 
-        audio_path = "../vlsp2020_train_set_02/{}".format(speaker)
+        audio_path = "../vinbig_reduce_noise/{}".format(speaker)
         emb = get_verification_pytorch(audio_path)
 
         if np.isnan(np.sum(emb)): 
